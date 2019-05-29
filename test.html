@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <style media="screen">
+        html, body, canvas {
+          width: 100%;
+          height: 100%;
+          margin: 0;
+        }
+    </style>
+    <meta charset="utf-8">
+    <title></title>
+  </head>
+  <body>
+    <canvas id="c" width="300" height="300"></canvas>
+  </body>
+  <script>
+let canvas = c
+let cw = canvas.width = 2*canvas.offsetWidth
+let ch = canvas.height = 2*canvas.offsetHeight
+let ctx = canvas.getContext('2d')
+
+const N = 40
+const rx = ()=>cw*Math.random(), ry=()=>ch*Math.random()
+const lines = Array(N).fill().map((_, i) => ([[rx(), ry()],[rx(), ry()]]))
+
+const bounds = [[rx(), ry()], [rx(), ry()]]
+
+const drawLine = (l) => {
+  ctx.beginPath();
+  ctx.moveTo(l[0][0],l[0][1])
+  ctx.lineTo(l[1][0],l[1][1])
+  ctx.stroke();
+}
+
+const drawCircle = (p) => {
+  ctx.beginPath();
+  ctx.arc(p[0], p[1], 4, 0, 2*Math.PI, true)
+  ctx.fill();
+}
+
+ctx.lineWidth = .5
+ctx.fillStyle = '#2190bf'
+lines.forEach(drawLine)
+
+const corner = {bl: [bounds[0][0], bounds[0][1]], br: [bounds[1][0], bounds[0][1]],
+  tl: [bounds[0][0], bounds[1][1]], tr: [bounds[1][0], bounds[1][1]]}
+ctx.strokeStyle = '#ff6b00';
+ctx.lineWidth = 4;
+[[corner.bl, corner.br], [corner.br, corner.tr], [corner.tr, corner.tl], [corner.tl, corner.bl]].forEach(drawLine)
+
+lines.forEach((l) => boundIntersections(l[0][0], l[0][1], l[1][0], l[1][1], bounds).forEach(drawCircle))
+
+function intersection(l1, l2) {
+  const x1=l1[0][0], x2=l1[1][0], x3=l2[0][0], x4=l2[1][0]
+  const y1=l1[0][1], y2=l1[1][1], y3=l2[0][1], y4=l2[1][1]
+  const disc = (x1-x2)*(y3-y4) - (y1-y2)*(x3-x4)
+
+  if (disc == 0)
+    return
+
+  const t = ((x1-x3)*(y3-y4) - (y1-y3)*(x3-x4)) / disc
+  const u = -((x1-x2)*(y1-y3) - (y1-y2)*(x1-x3)) / disc
+  if (t<0 || t>1 || u<0 || u>1)
+    return
+
+  const term1 = (x1*y2 - y1*x2), term2 = (x3*y4 - y3*x4)
+  return [
+    (term1*(x3-x4) - (x1-x2)*term2) / disc,
+    (term1*(y3-y4) - (y1-y2)*term2) / disc,
+  ]
+}
+
+function boundIntersections(sx, sy, nx, ny, bounds) {
+  const c = {bl: [bounds[0][0], bounds[0][1]], br: [bounds[1][0], bounds[0][1]],
+    tl: [bounds[0][0], bounds[1][1]], tr: [bounds[1][0], bounds[1][1]]}
+  const blines = [[c.bl, c.br], [c.br, c.tr], [c.tr, c.tl], [c.tl, c.bl]]
+  const start = [sx,sy]
+  const segment = [start, [nx, ny]]
+
+  return blines.map((bline) => intersection(bline, segment))
+               .filter((i)=>i)
+               .sort((p1, p2) => distance(p1,start) - distance(p2, start))
+}
+
+function distance(p1, p2) {
+  let dx = p1[0]-p2[0], dy = p1[1]-p2[2]
+  return Math.sqrt(dx*dx + dy*dy)
+}
+
+
+  </script>
+</html>

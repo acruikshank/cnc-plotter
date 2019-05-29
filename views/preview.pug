@@ -1,0 +1,16 @@
+html
+  head
+    title Preview #{script}
+    style.
+      html, body, canvas { width: 100%; height: 100%; margin: 0; }
+      body { background: #999; }
+    script(src="/bounded_plotter.js")
+    script(src="/stats_plotter.js")
+    script(src="/perlin.js")
+
+  body
+    canvas#c
+    script.
+      window.workerScript = "/#{script}.js"
+      window.config = !{JSON.stringify(config)};
+    script(src="/preview.js")

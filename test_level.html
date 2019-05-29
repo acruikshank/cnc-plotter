@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <style media="screen">
+        html, body, canvas {
+          width: 100%;
+          height: 100%;
+          margin: 0;
+        }
+    </style>
+    <meta charset="utf-8">
+    <title></title>
+  </head>
+  <body>
+    <canvas id="c" width="300" height="300"></canvas>
+  </body>
+  <script>
+const SCALE = 255
+let canvas = c
+let cw = canvas.width = canvas.offsetWidth/2
+let ch = canvas.height = canvas.offsetHeight/2
+let ctx = canvas.getContext('2d')
+
+const config = {
+  "drawRate": 1000,
+  "depth": -0.8,
+  "retraction": 0.8,
+  "bounds": [[0,0],[441,361]],
+  "depthMap": [
+    [ 0.000,  0.300, 0.400,  0.600, -0.600],
+    [ 0.000,  0.200, 0.100,  0.200, -0.600],
+    [-0.100, -0.100, 0.000, -0.200, -0.600],
+    [ 0.200,  0.800, 0.000,  0.000, -0.300],
+    [ 0.200,  0.200, 0.700, -0.100, -0.600]
+  ]
+}
+
+
+let dataBuf = ctx.getImageData(0, 0, cw, ch);
+let pixels = dataBuf.data
+
+function lerp(x,a,b) { return a + x*(b-a) }
+
+for (let i=0; i<pixels.length; i+=4) {
+  let x = (i % (4*cw))/4
+  let y = parseInt(i / cw / 4)
+
+  let px = lerp(x/cw, config.bounds[0][0], config.bounds[1][0])
+  let py = lerp(y/ch, config.bounds[0][1], config.bounds[1][1])
+
+  let r=0, g=0, b=0
+  let depth = levelz(px, py, config)
+  // let depth = 0;
+  if (depth < 0)
+    b = Math.min(255,parseInt(-SCALE*depth))
+  else
+    r = Math.min(255,parseInt(SCALE*depth))
+
+  pixels[i] = r
+  pixels[i+1] = g
+  pixels[i+2] = b
+  pixels[i+3] = 255
+}
+
+ctx.putImageData(dataBuf, 0, 0)
+
+function levelz(x, y, config) {
+  if (!config.depthMap)
+    return 0
+
+  const bounds = config.bounds
+  const depthMap = config.depthMap
+  const lenx = depthMap.length
+  const leny = depthMap[0].length
+  const xsize = bounds[1][0]-bounds[0][0]
+  const ysize = bounds[1][1]-bounds[0][1]
+  const xseg = xsize/(lenx-1)
+  const yseg = ysize/(leny-1)
+
+  // find relevant square and fraction within it.
+  // the .99999s keeps us from finding the far edge
+  const xindex = parseInt((x-bounds[0][0])*(lenx-1) / xsize)
+  const yindex = parseInt((y-bounds[0][1])*(leny-1) / ysize)
+
+  // compute the location (t,u) within the square as a fractions between (0,0) and (1,1)
+  const t = ((x-bounds[0][0]) % xseg) / xseg
+  const u = ((y-bounds[0][1]) % yseg) / yseg
+
+  // lerp the offsets
+  let z1 = xindex < lenx-1
+    ? lerp(t, depthMap[xindex][yindex], depthMap[xindex+1][yindex])
+    : depthMap[xindex][yindex]
+
+  if (yindex == leny-1)
+    return z1
+
+  return lerp(u, z1, lerp(t, depthMap[xindex][yindex+1], depthMap[xindex+1][yindex+1]))
+}
+
+
+  </script>
+</html>
